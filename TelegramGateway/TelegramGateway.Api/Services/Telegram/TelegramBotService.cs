@@ -70,7 +70,8 @@ public sealed class TelegramBotService : ITelegramBotService
 
         return new TelegramFileDownload
         {
-            Stream = stream
+            Stream = stream,
+            FileName = Path.GetFileName(file.FilePath)
         };
     }
 

@@ -24,9 +24,10 @@ public sealed class SupportFilesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public Task<IActionResult> DownloadFile(
         [FromRoute] string telegramFileId,
+        [FromQuery] string? fileName,
         CancellationToken cancellationToken)
     {
-        return DownloadTelegramFileAsync(telegramFileId, false, cancellationToken);
+        return DownloadTelegramFileAsync(telegramFileId, fileName, false, cancellationToken);
     }
 
     [HttpGet("{telegramFileId}/thumbnail")]
@@ -37,11 +38,12 @@ public sealed class SupportFilesController : ControllerBase
         [FromRoute] string telegramFileId,
         CancellationToken cancellationToken)
     {
-        return DownloadTelegramFileAsync(telegramFileId, true, cancellationToken);
+        return DownloadTelegramFileAsync(telegramFileId, null, true, cancellationToken);
     }
 
     private async Task<IActionResult> DownloadTelegramFileAsync(
         string telegramFileId,
+        string? requestedFileName,
         bool isThumbnail,
         CancellationToken cancellationToken)
     {
@@ -59,7 +61,16 @@ public sealed class SupportFilesController : ControllerBase
                 telegramFileId,
                 isThumbnail);
 
-            return File(download.Stream, download.ContentType);
+            if (isThumbnail)
+            {
+                return File(download.Stream, download.ContentType);
+            }
+
+            var downloadFileName = GetSafeFileName(requestedFileName)
+                ?? GetSafeFileName(download.FileName)
+                ?? "download";
+
+            return File(download.Stream, download.ContentType, downloadFileName);
         }
         catch (Exception ex)
         {
@@ -73,5 +84,21 @@ public sealed class SupportFilesController : ControllerBase
                 StatusCodes.Status500InternalServerError,
                 new { error = "Telegram file download failed." });
         }
+    }
+
+    private static string? GetSafeFileName(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return null;
+        }
+
+        var safeFileName = Path.GetFileName(fileName.Trim());
+        foreach (var invalidCharacter in Path.GetInvalidFileNameChars())
+        {
+            safeFileName = safeFileName.Replace(invalidCharacter, '_');
+        }
+
+        return string.IsNullOrWhiteSpace(safeFileName) ? null : safeFileName;
     }
 }

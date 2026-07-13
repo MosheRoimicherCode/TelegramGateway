@@ -33,7 +33,17 @@ public sealed class HistoryCursorTests
                     SessionId = "session-103",
                     Direction = "TelegramToFrontend",
                     Text = "next message",
-                    CreatedAtUtc = DateTime.UtcNow
+                    CreatedAtUtc = DateTime.UtcNow,
+                    Files =
+                    [
+                        new SupportFileResponse
+                        {
+                            TelegramFileId = "telegram-file-id",
+                            FileName = "project drawing.pdf",
+                            MimeType = "application/pdf",
+                            DownloadUrl = string.Empty
+                        }
+                    ]
                 }
             ],
             NextMessageId = 103,
@@ -56,7 +66,11 @@ public sealed class HistoryCursorTests
         var request = Assert.IsType<GetSupportHistoryTcpData>(call.Data);
         Assert.Equal(102, request.AfterMessageId);
         Assert.Equal(10, request.Limit);
-        Assert.Equal("next message", Assert.Single(page.Messages).Text);
+        var message = Assert.Single(page.Messages);
+        Assert.Equal("next message", message.Text);
+        Assert.Equal(
+            "/api/support/files/telegram-file-id?fileName=project%20drawing.pdf",
+            Assert.Single(message.Files).DownloadUrl);
         Assert.True(HistoryCursorCodec.TryDecode(page.NextCursor, out var nextMessageId));
         Assert.Equal(103, nextMessageId);
     }

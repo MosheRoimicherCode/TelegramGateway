@@ -29,6 +29,7 @@ internal sealed record DatabaseCall(string CommandType, object Data);
 internal sealed class FakeTelegramBotService : ITelegramBotService
 {
     public IReadOnlyList<GatewayFileMetadata> ExtractedFiles { get; init; } = [];
+    public TelegramFileDownload? FileDownload { get; init; }
 
     public Task<TelegramSendMessageResult> SendFrontendMessageAsync(
         FrontendSendSupportMessageRequest request,
@@ -41,7 +42,7 @@ internal sealed class FakeTelegramBotService : ITelegramBotService
         string telegramFileId,
         CancellationToken cancellationToken = default)
     {
-        throw new NotSupportedException();
+        return Task.FromResult(FileDownload ?? throw new NotSupportedException());
     }
 
     public IReadOnlyList<GatewayFileMetadata> ExtractFiles(TelegramMessageDto message)

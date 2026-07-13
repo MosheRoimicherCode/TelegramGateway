@@ -477,9 +477,7 @@ public sealed class SupportMessageOrchestrator : ISupportMessageOrchestrator
             FileName = file.FileName,
             MimeType = file.MimeType,
             FileSize = file.FileSize,
-            DownloadUrl = string.IsNullOrWhiteSpace(file.DownloadUrl)
-                ? BuildFileDownloadUrl(file.TelegramFileId)
-                : file.DownloadUrl,
+            DownloadUrl = BuildFileDownloadUrl(file.TelegramFileId, file.FileName),
             Thumbnail = file.Thumbnail is null
                 ? null
                 : new SupportFileThumbnailResponse
@@ -496,9 +494,12 @@ public sealed class SupportMessageOrchestrator : ISupportMessageOrchestrator
         };
     }
 
-    private static string BuildFileDownloadUrl(string telegramFileId)
+    private static string BuildFileDownloadUrl(string telegramFileId, string fileName)
     {
-        return $"/api/support/files/{Uri.EscapeDataString(telegramFileId)}";
+        var url = $"/api/support/files/{Uri.EscapeDataString(telegramFileId)}";
+        return string.IsNullOrWhiteSpace(fileName)
+            ? url
+            : $"{url}?fileName={Uri.EscapeDataString(fileName.Trim())}";
     }
 
     private static string BuildThumbnailDownloadUrl(string telegramFileId)
