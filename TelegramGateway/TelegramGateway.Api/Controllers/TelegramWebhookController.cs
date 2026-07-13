@@ -10,7 +10,7 @@ namespace TelegramGateway.Api.Controllers;
 [Route("api/telegram/webhook")]
 public sealed class TelegramWebhookController : ControllerBase
 {
-    private const string TelegramSecretHeader = "8733184405:AAGRHK3FzDn4NRJQsKIYf6EXAaX0JDjJAKA";
+    private string TelegramSecretHeader = "X-Telegram-Bot-Api-Secret-Token";
 
     private readonly ISupportMessageOrchestrator _orchestrator;
     private readonly TelegramOptions _telegramOptions;

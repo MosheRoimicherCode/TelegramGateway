@@ -185,7 +185,11 @@ public sealed class SupportMessageOrchestrator : ISupportMessageOrchestrator
         }
 
         var message = update.Message;
-        var text = message.Text ?? message.Caption ?? string.Empty;
+        // Telegram puts text written together with a photo/document in Caption.
+        // Prefer a real text value, but fall back when Text is null or empty.
+        var text = string.IsNullOrWhiteSpace(message.Text)
+            ? message.Caption ?? string.Empty
+            : message.Text;
         var files = _telegram.ExtractFiles(message);
 
         if (string.IsNullOrWhiteSpace(text) && files.Count == 0)

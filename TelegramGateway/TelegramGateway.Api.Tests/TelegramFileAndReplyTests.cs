@@ -147,7 +147,50 @@ public sealed class TelegramFileAndReplyTests
         Assert.Equal(-100123456, saveData.TelegramChatId);
         Assert.Equal(701, saveData.TelegramMessageId);
         Assert.Equal("TelegramToFrontend", saveData.Direction);
+        Assert.Equal("office reply", saveData.Text);
         Assert.Equal("reply-file-id", Assert.Single(saveData.Files).TelegramFileId);
+    }
+
+    [Fact]
+    public async Task WebhookTextReply_SavesTextWithoutFiles()
+    {
+        var database = new FakeDatabaseServiceTcpClient();
+        database.Responses.Enqueue(Success(new TelegramMessageContextTcpResponse
+        {
+            UserId = 42,
+            UserName = "Original customer",
+            PhoneNumber = "0585200517",
+            SessionId = "session-original",
+            ProjectName = "project.fly"
+        }));
+        database.Responses.Enqueue(new DatabaseServiceResponsePacket { Ok = true });
+
+        var orchestrator = new SupportMessageOrchestrator(
+            new FakeTelegramBotService(),
+            database,
+            NullLogger<SupportMessageOrchestrator>.Instance);
+
+        var response = await orchestrator.HandleTelegramWebhookAsync(new TelegramUpdateDto
+        {
+            UpdateId = 801,
+            Message = new TelegramMessageDto
+            {
+                MessageId = 702,
+                Chat = new TelegramChatDto { Id = -100123456 },
+                Text = "office text reply",
+                ReplyToMessage = new TelegramMessageDto { MessageId = 700 }
+            }
+        });
+
+        Assert.True(response.Ok);
+        Assert.Equal(2, database.Calls.Count);
+
+        var save = database.Calls[1];
+        Assert.Equal("SaveSupportMessage", save.CommandType);
+        var saveData = Assert.IsType<SaveSupportMessageTcpData>(save.Data);
+        Assert.Equal("office text reply", saveData.Text);
+        Assert.Equal("TelegramToFrontend", saveData.Direction);
+        Assert.Equal(702, saveData.TelegramMessageId);
     }
 
     [Fact]
