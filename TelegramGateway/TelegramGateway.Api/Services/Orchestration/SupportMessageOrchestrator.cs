@@ -496,7 +496,7 @@ public sealed class SupportMessageOrchestrator : ISupportMessageOrchestrator
 
     private static string BuildFileDownloadUrl(string telegramFileId, string fileName)
     {
-        var url = $"/api/support/files/{Uri.EscapeDataString(telegramFileId)}";
+        var url = $"api/support/files/{Uri.EscapeDataString(telegramFileId)}";
         return string.IsNullOrWhiteSpace(fileName)
             ? url
             : $"{url}?fileName={Uri.EscapeDataString(fileName.Trim())}";
@@ -504,7 +504,7 @@ public sealed class SupportMessageOrchestrator : ISupportMessageOrchestrator
 
     private static string BuildThumbnailDownloadUrl(string telegramFileId)
     {
-        return $"/api/support/files/{Uri.EscapeDataString(telegramFileId)}/thumbnail";
+        return $"api/support/files/{Uri.EscapeDataString(telegramFileId)}/thumbnail";
     }
 
     private static string BuildTelegramUserName(TelegramUserDto? user)
