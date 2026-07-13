@@ -63,14 +63,17 @@ public sealed class SupportFilesController : ControllerBase
 
             if (isThumbnail)
             {
-                return File(download.Stream, download.ContentType);
+                return File(
+                    download.Stream,
+                    GetContentType(requestedFileName, download.FileName, download.ContentType));
             }
 
             var downloadFileName = GetSafeFileName(requestedFileName)
                 ?? GetSafeFileName(download.FileName)
                 ?? "download";
 
-            return File(download.Stream, download.ContentType, downloadFileName);
+            var contentType = GetContentType(downloadFileName, download.FileName, download.ContentType);
+            return File(download.Stream, contentType, downloadFileName);
         }
         catch (Exception ex)
         {
@@ -101,4 +104,34 @@ public sealed class SupportFilesController : ControllerBase
 
         return string.IsNullOrWhiteSpace(safeFileName) ? null : safeFileName;
     }
+
+    private static string GetContentType(
+        string? requestedFileName,
+        string? telegramFileName,
+        string fallbackContentType)
+    {
+        var fileName = GetSafeFileName(requestedFileName)
+            ?? GetSafeFileName(telegramFileName);
+
+        var extension = string.IsNullOrWhiteSpace(fileName)
+            ? string.Empty
+            : Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            ".svg" => "image/svg+xml",
+            ".pdf" => "application/pdf",
+            ".txt" => "text/plain",
+            ".json" => "application/json",
+            ".zip" => "application/zip",
+            _ => string.IsNullOrWhiteSpace(fallbackContentType)
+                ? "application/octet-stream"
+                : fallbackContentType
+        };
+    }
+
 }

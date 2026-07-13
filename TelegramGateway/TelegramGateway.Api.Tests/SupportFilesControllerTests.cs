@@ -59,5 +59,6 @@ public sealed class SupportFilesControllerTests
 
         var fileResult = Assert.IsType<FileStreamResult>(actionResult);
         Assert.Equal("file_0.png", fileResult.FileDownloadName);
+        Assert.Equal("image/png", fileResult.ContentType);
     }
 }
