@@ -20,6 +20,19 @@ namespace TelegramGateway.Api
                 .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
             builder.Services.AddControllers();
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("StandaloneTestPage", policy =>
+                {
+                    policy.SetIsOriginAllowed(origin =>
+                        string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase) ||
+                        (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                         (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) ||
+                          string.Equals(uri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase))))
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
             builder.Services.AddScoped<ISupportMessageService, SupportMessageService>();
             builder.Services.AddScoped<ISupportMessageOrchestrator, SupportMessageOrchestrator>();
 
@@ -41,6 +54,8 @@ namespace TelegramGateway.Api
                 app.UseSwaggerUI();
             }
 
+            app.UseRouting();
+            app.UseCors("StandaloneTestPage");
             app.UseHttpsRedirection();
             app.UseAuthorization();
 

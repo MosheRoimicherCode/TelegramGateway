@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Support Test</title>
+    <style>
+        body { font: 14px Arial, sans-serif; max-width: 760px; margin: 20px auto; padding: 0 12px; }
+        input, button { padding: 7px; margin: 3px 0; }
+        input[type="text"], input[type="url"] { width: 100%; box-sizing: border-box; }
+        button { cursor: pointer; }
+        #messages { margin-top: 16px; }
+        .message { max-width: 75%; margin: 8px 0; padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; }
+        .sent { margin-left: auto; background: #d9fdd3; }
+        .received { margin-right: auto; background: #eeeeee; }
+        .meta { color: #666; font-size: 11px; margin-bottom: 4px; }
+        .file { display: block; margin-top: 6px; }
+        .file img { display: block; max-width: 180px; max-height: 140px; margin-top: 4px; }
+        #status { min-height: 18px; color: #555; }
+    </style>
+</head>
+<body>
+    <h3>Support test</h3>
+
+    <label>Gateway URL</label>
+    <input id="gateway" type="url" value="https://gd9xs682-7086.euw.devtunnels.ms">
+
+    <label>Phone number</label>
+    <input id="phone" type="text" value="0585200517">
+
+    <label>Project</label>
+    <input id="project" type="text" value="_5654_NofHagalil_Har_Yona_KIT.fly">
+
+    <label>User name</label>
+    <input id="userName" type="text" value="Chrome test user">
+
+    <label>Session ID</label>
+    <input id="sessionId" type="text" value="chrome-test-session">
+
+    <button id="load">Load history</button>
+    <hr>
+
+    <input id="text" type="text" placeholder="Message text">
+    <input id="file" type="file">
+    <button id="send">Send</button>
+
+    <div id="status"></div>
+    <div id="messages"></div>
+
+    <script>
+        const state = { cursor: null, loaded: false, polling: false };
+        const $ = id => document.getElementById(id);
+
+        function apiUrl(path) {
+            return `${$('gateway').value.trim().replace(/\/$/, '')}${path}`;
+        }
+
+        function setStatus(text) {
+            $('status').textContent = text;
+        }
+
+        function absoluteUrl(value) {
+            return new URL(value, $('gateway').value.trim()).href;
+        }
+
+        function addFile(container, file) {
+            const link = document.createElement('a');
+            link.className = 'file';
+            link.href = absoluteUrl(file.downloadUrl);
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = file.fileName || file.fileKind || 'file';
+            container.appendChild(link);
+
+            if (file.thumbnail && file.thumbnail.previewUrl) {
+                const image = document.createElement('img');
+                image.src = absoluteUrl(file.thumbnail.previewUrl);
+                image.alt = file.fileName || 'thumbnail';
+                container.appendChild(image);
+            }
+        }
+
+        function addMessage(message) {
+            const sent = message.direction === 'FrontendToTelegram';
+            const item = document.createElement('div');
+            item.className = `message ${sent ? 'sent' : 'received'}`;
+
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.textContent = `${sent ? 'Sent' : 'Received'} - ${message.createdAtUtc || ''}`;
+            item.appendChild(meta);
+
+            if (message.text) {
+                const text = document.createElement('div');
+                text.textContent = message.text;
+                item.appendChild(text);
+            }
+
+            for (const file of message.files || []) {
+                addFile(item, file);
+            }
+
+            $('messages').appendChild(item);
+        }
+
+        function historyUrl(cursor) {
+            const query = new URLSearchParams({
+                phoneNumber: $('phone').value.trim(),
+                projectName: $('project').value.trim(),
+                limit: '100'
+            });
+
+            if (cursor) query.set('afterCursor', cursor);
+            return apiUrl(`/api/support/messages/history?${query}`);
+        }
+
+        async function readPage(cursor) {
+            const response = await fetch(historyUrl(cursor));
+            if (!response.ok) throw new Error(await response.text());
+            return response.json();
+        }
+
+        async function loadHistory() {
+            state.cursor = null;
+            state.loaded = false;
+            $('messages').replaceChildren();
+            setStatus('Loading history...');
+
+            do {
+                const page = await readPage(state.cursor);
+                for (const message of page.messages || []) addMessage(message);
+
+                const next = page.nextCursor;
+                if (!page.hasMore) {
+                    state.cursor = next || state.cursor;
+                    break;
+                }
+
+                if (!next || next === state.cursor) throw new Error('Invalid pagination cursor.');
+                state.cursor = next;
+            } while (true);
+
+            state.loaded = true;
+            setStatus($('messages').children.length
+                ? 'Loaded. Polling every 10 seconds.'
+                : 'No messages found for this phone number and project.');
+        }
+
+        async function poll() {
+            if (!state.loaded || state.polling) return;
+            state.polling = true;
+
+            try {
+                let added = 0;
+                do {
+                    const page = await readPage(state.cursor);
+                    for (const message of page.messages || []) {
+                        addMessage(message);
+                        added++;
+                    }
+
+                    const next = page.nextCursor;
+                    if (!page.hasMore) {
+                        state.cursor = next || state.cursor;
+                        break;
+                    }
+
+                    if (!next || next === state.cursor) throw new Error('Invalid pagination cursor.');
+                    state.cursor = next;
+                } while (true);
+
+                setStatus(added ? `Received ${added} new message(s).` : 'No new messages.');
+            } catch (error) {
+                setStatus(`Polling failed: ${error.message}`);
+            } finally {
+                state.polling = false;
+            }
+        }
+
+        async function sendMessage() {
+            const form = new FormData();
+            form.append('SessionId', $('sessionId').value.trim());
+            form.append('PhoneNumber', $('phone').value.trim());
+            form.append('UserName', $('userName').value.trim());
+            form.append('ProjectName', $('project').value.trim());
+            form.append('Text', $('text').value);
+
+            if ($('file').files.length > 0) {
+                form.append('File', $('file').files[0]);
+            }
+
+            setStatus('Sending...');
+            const response = await fetch(apiUrl('/api/support/messages'), {
+                method: 'POST',
+                body: form
+            });
+
+            if (!response.ok) throw new Error(await response.text());
+            $('text').value = '';
+            $('file').value = '';
+            await poll();
+            setStatus('Message sent.');
+        }
+
+        $('load').addEventListener('click', () => loadHistory().catch(error => setStatus(`Load failed: ${error.message}`)));
+        $('send').addEventListener('click', () => sendMessage().catch(error => setStatus(`Send failed: ${error.message}`)));
+        setInterval(poll, 10000);
+        loadHistory().catch(error => setStatus(`Load failed: ${error.message}`));
+    </script>
+</body>
+</html>
