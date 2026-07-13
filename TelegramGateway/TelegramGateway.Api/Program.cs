@@ -27,6 +27,7 @@ namespace TelegramGateway.Api
                     policy.SetIsOriginAllowed(origin =>
                         string.Equals(origin, "null", StringComparison.OrdinalIgnoreCase) ||
                         origin.StartsWith("file:", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(origin, "https://support.kav-medida.co.il", StringComparison.OrdinalIgnoreCase) ||
                         (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
                          (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase) ||
                           string.Equals(uri.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase))))
