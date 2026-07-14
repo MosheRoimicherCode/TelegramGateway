@@ -117,7 +117,7 @@ public sealed class TelegramBotService : ITelegramBotService
         using var content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["chat_id"] = _options.TargetChatId,
-            ["text"] = request.Text
+            ["text"] = BuildTelegramSupportText(request)
         });
 
         var telegramMessage = await PostTelegramAsync<TelegramMessageDto>("sendMessage", content, cancellationToken);
@@ -155,7 +155,7 @@ public sealed class TelegramBotService : ITelegramBotService
 
         if (!string.IsNullOrWhiteSpace(request.Text))
         {
-            content.Add(new StringContent(request.Text), "caption");
+            content.Add(new StringContent(BuildTelegramSupportText(request)), "caption");
         }
 
         using var fileContent = new StreamContent(fileStream);
@@ -300,5 +300,17 @@ public sealed class TelegramBotService : ITelegramBotService
         {
             throw new InvalidOperationException("Telegram BotToken is missing.");
         }
+    }
+
+    private static string BuildTelegramSupportText(FrontendSendSupportMessageRequest request)
+    {
+        return $"""
+            Support Request (Session: {request.SessionId}):
+            User Name: {request.UserName}
+            Phone Number: {request.PhoneNumber}
+            Fly Project: {request.ProjectName}
+
+            Message: {request.Text}
+            """;
     }
 }
