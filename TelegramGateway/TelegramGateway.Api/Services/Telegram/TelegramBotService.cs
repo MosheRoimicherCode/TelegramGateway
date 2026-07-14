@@ -138,7 +138,7 @@ public sealed class TelegramBotService : ITelegramBotService
         {
             TelegramChatId = telegramChatId,
             TelegramMessageId = telegramMessage.MessageId,
-            Text = telegramMessage.Text ?? request.Text
+            Text = request.Text
         };
     }
 
@@ -191,7 +191,7 @@ public sealed class TelegramBotService : ITelegramBotService
         {
             TelegramChatId = telegramChatId,
             TelegramMessageId = telegramMessage.MessageId,
-            Text = telegramMessage.Caption ?? request.Text,
+            Text = request.Text,
             Files = files
         };
     }

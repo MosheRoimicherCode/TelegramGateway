@@ -17,6 +17,43 @@ namespace TelegramGateway.Api.Tests;
 public sealed class TelegramFileAndReplyTests
 {
     [Fact]
+    public async Task SendText_ReturnsOriginalMessageTextForHistory()
+    {
+        const string telegramJson = """
+            {
+              "ok": true,
+              "result": {
+                "message_id": 699,
+                "chat": { "id": -100123456, "type": "supergroup" },
+                "text": "Support Request (Session: session-1):\nUser Name: Moshe\nPhone Number: 0585200517\nFly Project: project.fly\n\nMessage: customer message"
+              }
+            }
+            """;
+
+        var handler = new RecordingHttpMessageHandler(telegramJson);
+        var service = new TelegramBotService(
+            new HttpClient(handler),
+            Microsoft.Extensions.Options.Options.Create(new TelegramOptions
+            {
+                BotToken = "test-token",
+                TargetChatId = "-100123456",
+                BotApiBaseUrl = "https://telegram.test"
+            }),
+            NullLogger<TelegramBotService>.Instance);
+
+        var result = await service.SendFrontendMessageAsync(new FrontendSendSupportMessageRequest
+        {
+            SessionId = "session-1",
+            UserName = "Moshe",
+            PhoneNumber = "0585200517",
+            ProjectName = "project.fly",
+            Text = "customer message"
+        });
+
+        Assert.Equal("customer message", result.Text);
+    }
+
+    [Fact]
     public async Task SendDocument_ReturnsChatMessageFileAndThumbnailIds()
     {
         const string telegramJson = """
@@ -76,6 +113,7 @@ public sealed class TelegramFileAndReplyTests
         Assert.EndsWith("/bottest-token/sendDocument", handler.RequestUri?.AbsoluteUri);
         Assert.Equal(-100123456, result.TelegramChatId);
         Assert.Equal(700, result.TelegramMessageId);
+        Assert.Equal("attached drawing", result.Text);
         var metadata = Assert.Single(result.Files);
         Assert.Equal("telegram-file-id", metadata.TelegramFileId);
         Assert.Equal("thumbnail-file-id", metadata.Thumbnail?.TelegramFileId);
