@@ -58,7 +58,7 @@ namespace TelegramGateway.Api
 
             app.UseRouting();
             app.UseCors("StandaloneTestPage");
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseAuthorization();
 
             app.MapControllers();
